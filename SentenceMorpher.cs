@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Morphology
 {
     public class WordWithAttributes
     {
         public string Word { get; }
-        public string Attributes { get; }
+        public HashSet<string> Attributes { get; }
 
-        public WordWithAttributes(string word, string attributes)
+        public WordWithAttributes(string word, HashSet<string> attributes)
         {
             Word = word;
             Attributes = attributes;
@@ -19,11 +18,8 @@ namespace Morphology
 
     public class SentenceMorpher
     {
-        private readonly Dictionary<string, Dictionary<string, LinkedList<string>>> _dictionary;
-        public SentenceMorpher(Dictionary<string, Dictionary<string, LinkedList<string>>> dic)
-        {
-            _dictionary = dic;
-        }
+        private readonly Dictionary<string, List<WordWithAttributes>> _dictionary;
+        public SentenceMorpher(Dictionary<string, List<WordWithAttributes>> dic) =>_dictionary = dic;
 
         /// <summary>
         ///     Создает <see cref="SentenceMorpher"/> из переданного набора строк словаря.
@@ -38,42 +34,31 @@ namespace Morphology
         /// </param>
         public static SentenceMorpher Create(IEnumerable<string> dictionaryLines)
         {
-            var dictionary = new Dictionary<string, Dictionary<string, LinkedList<string>>>();
-            var previousIsNumber = false;
-            //var previousWasEmpty = true;
-            var previousWord = string.Empty;
-            foreach (var line in dictionaryLines)
-            {
-                if (line.Length == 0)
-                {
-                    //previousWasEmpty = true;
-                    continue;
-                }
+            var dictionary = new Dictionary<string, List<WordWithAttributes>>();
+            var isMainForm = false;
+            var wordMainForm = string.Empty;
 
-                if (char.IsNumber(line[0]))
+            foreach (var line in dictionaryLines.Where(line => line.Length != 0))
+            {
+                if (int.TryParse(line, out _))
                 {
-                    previousIsNumber = true;
+                    isMainForm = true;
                     continue;
                 }
 
                 var parsed = ParseLine(line);
-                if (previousIsNumber)
-                //if (previousWasEmpty)
+                if (isMainForm)
                 {
-                    if (!dictionary.ContainsKey(parsed.Word))
-                    {
-                        dictionary[parsed.Word] = new Dictionary<string, LinkedList<string>>();
-                    }
-
-                    //previousWasEmpty = false;
-                    previousIsNumber = false;
-                    previousWord = parsed.Word;
+                    wordMainForm = parsed.Word;
+                    isMainForm = false;
                 }
 
-                if (!dictionary[previousWord].ContainsKey(parsed.Attributes))
-                    dictionary[previousWord][parsed.Attributes] = new LinkedList<string>();
+                if (!dictionary.ContainsKey(wordMainForm))
+                {
+                    dictionary[wordMainForm] = new List<WordWithAttributes>();
+                }
 
-                dictionary[previousWord][parsed.Attributes].AddLast(parsed.Word);
+                dictionary[wordMainForm].Add(parsed);
             }
             return new SentenceMorpher(dictionary);
         }
@@ -82,10 +67,11 @@ namespace Morphology
         {
             var result = line.Split('\t');
 
-            return new WordWithAttributes(
-                result[0].ToLowerInvariant(),
-                string.Join(',', result[1].Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant()
-                );
+            return new WordWithAttributes
+            (
+                result[0].ToUpper(),
+                new HashSet<string>(result[1].ToUpper().Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries))
+            );
         }
 
         /// <summary>
@@ -107,18 +93,39 @@ namespace Morphology
             foreach (var word in words)
             {
                 var temp = word.Split(new[] { '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
+                var requiredWord = temp[0].ToUpper();
+
                 if (temp.Length == 1)
                 {
-                    result.Add(temp[0].ToLowerInvariant());
+                    result.Add(requiredWord);
                     continue;
                 }
 
-                var attributes = string.Join(',', temp[1].Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
-                var wordToAdd = temp[0].ToLowerInvariant();
-                if (_dictionary.TryGetValue(wordToAdd, out var wordForms) && wordForms.TryGetValue(attributes, out var requiredWord))
-                    wordToAdd = requiredWord.Last.Value;
+                var attributes = temp[1].ToUpper().Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-                result.Add(wordToAdd);
+                if (_dictionary.TryGetValue(requiredWord, out var wordForms))
+                {
+                    foreach (var wordForm in wordForms)
+                    {
+                        var isRequiredForm = true;
+                        foreach (var attribute in attributes)
+                        {
+                            if (!wordForm.Attributes.Contains(attribute))
+                            {
+                                isRequiredForm = false;
+                                break;
+                            }
+                        }
+
+                        if (isRequiredForm)
+                        {
+                            requiredWord = wordForm.Word;
+                            break;
+                        }
+                    }
+                }
+
+                result.Add(requiredWord);
             }
 
             return string.Join(' ', result);
