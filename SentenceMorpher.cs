@@ -46,10 +46,10 @@ namespace Morphology
                     continue;
                 }
 
-                var parsed = ParseLine(line);
+                var wordForm = ParseLine(line);
                 if (isMainForm)
                 {
-                    wordMainForm = parsed.Word;
+                    wordMainForm = wordForm.Word;
                     isMainForm = false;
                 }
 
@@ -58,20 +58,19 @@ namespace Morphology
                     dictionary[wordMainForm] = new List<WordWithAttributes>();
                 }
 
-                dictionary[wordMainForm].Add(parsed);
+                dictionary[wordMainForm].Add(wordForm);
             }
             return new SentenceMorpher(dictionary);
         }
 
         public static WordWithAttributes ParseLine(string line)
         {
-            var result = line.Split('\t');
+            var arr = line.Split('\t');
 
-            return new WordWithAttributes
-            (
-                result[0].ToUpper(),
-                new HashSet<string>(result[1].ToUpper().Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries))
-            );
+            var word = arr[0].ToUpper();
+            var attributes = arr[1].ToUpper().Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+            return new WordWithAttributes(word, new HashSet<string>(attributes));
         }
 
         /// <summary>
@@ -92,8 +91,8 @@ namespace Morphology
 
             foreach (var word in words)
             {
-                var temp = word.Split(new[] { '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
-                var requiredWord = temp[0].ToUpper();
+                var temp = word.ToUpper().Split(new[] { '{', '}' }, StringSplitOptions.RemoveEmptyEntries);
+                var requiredWord = temp[0];
 
                 if (temp.Length == 1)
                 {
@@ -101,7 +100,7 @@ namespace Morphology
                     continue;
                 }
 
-                var attributes = temp[1].ToUpper().Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                var attributes = temp[1].Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
                 if (_dictionary.TryGetValue(requiredWord, out var wordForms))
                 {
@@ -124,10 +123,8 @@ namespace Morphology
                         }
                     }
                 }
-
                 result.Add(requiredWord);
             }
-
             return string.Join(' ', result);
         }
     }
