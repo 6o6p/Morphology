@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Morphology
 {
-    public class WordWithAttributes
+    public class WordWithAttributes //круто что выделил отдельный класс
     {
         public string Word { get; }
         public HashSet<string> Attributes { get; }
@@ -19,12 +19,12 @@ namespace Morphology
     public class SentenceMorpher
     {
         private readonly Dictionary<string, List<WordWithAttributes>> _dictionary;
-        public SentenceMorpher(Dictionary<string, List<WordWithAttributes>> dic) =>_dictionary = dic;
+        public SentenceMorpher(Dictionary<string, List<WordWithAttributes>> dic) =>_dictionary = dic; //куда-то убежал пробел после стрелки
 
         /// <summary>
         ///     Создает <see cref="SentenceMorpher"/> из переданного набора строк словаря.
         /// </summary>
-        /// <remarks>
+        /// <remarks>                                                           //комментарии из шаблона решения можно было убрать
         ///     В этом методе должен быть код инициализации: 
         ///     чтение и преобразование входных данных для дальнейшего их использования
         /// </remarks>
@@ -38,7 +38,7 @@ namespace Morphology
             var isMainForm = false;
             var wordMainForm = string.Empty;
 
-            foreach (var line in dictionaryLines.Where(line => line.Length != 0))
+            foreach (var line in dictionaryLines.Where(line => line.Length != 0))   //парсинг через регулярки выглядит элегантнее, к Morph Это тоже относится
             {
                 if (int.TryParse(line, out _))
                 {
@@ -106,7 +106,7 @@ namespace Morphology
                 {
                     foreach (var wordForm in wordForms)
                     {
-                        var isRequiredForm = true;
+                        var isRequiredForm = true;                      //проверку на то что набор атрибутов является частью подмножества атрибутов лаконичнее и эффективнее сделать через Hashset.IsSubsetOf
                         foreach (var attribute in attributes)
                         {
                             if (!wordForm.Attributes.Contains(attribute))
